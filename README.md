@@ -9,181 +9,152 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         .tab-content { display: none; }
-        .active { display: block; }
-        .glass-card { background: white; border-radius: 20px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1); }
+        .tab-content.active { display: block; }
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
-<body class="bg-gray-100 pb-24">
+<body class="bg-gray-50 pb-24">
 
-    <header class="p-6 bg-white flex justify-between items-center shadow-sm">
-        <h1 class="text-xl font-bold text-blue-600 italic">FinanceFlow</h1>
-        <div class="text-xs text-gray-400" id="last-update">尚未儲存</div>
+    <header class="p-6 bg-white shadow-sm sticky top-0 z-50">
+        <h1 class="text-xl font-bold text-blue-600">我的財富看板</h1>
     </header>
 
     <main class="p-4 max-w-md mx-auto">
-        
         <div id="tab-assets" class="tab-content active">
-            <div class="bg-blue-600 p-6 rounded-[2.5rem] text-white mb-6 shadow-lg">
-                <p class="text-sm opacity-80">目前總淨資產</p>
-                <h2 id="display-total" class="text-3xl font-bold mt-1">$ 0</h2>
-                <div class="mt-4 flex justify-between text-xs bg-white/10 p-3 rounded-xl">
-                    <span>現金: <span id="lbl-cash">$0</span></span>
-                    <span>投資: <span id="lbl-stock">$0</span></span>
-                    <span>儲蓄: <span id="lbl-save">$0</span></span>
-                </div>
+            <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2rem] text-white mb-6 shadow-xl">
+                <p class="text-sm opacity-80">目前估算總資產</p>
+                <h2 id="display-total" class="text-4xl font-black mt-2">$ 0</h2>
             </div>
 
-            <div class="glass-card p-6 mb-6">
-                <h3 class="font-bold text-gray-700 mb-4"><i class="fas fa-edit mr-2"></i>資產更新 (記帳)</h3>
+            <div class="bg-white p-6 rounded-3xl shadow-sm mb-6 border border-gray-100">
+                <h3 class="font-bold mb-4 text-gray-700">快速記帳 / 更新數值</h3>
                 <div class="space-y-4">
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">現金帳戶 / 錢包</label>
-                        <input type="number" id="in-cash" class="w-full border-b-2 border-gray-100 p-2 focus:border-blue-500 outline-none transition-all" placeholder="輸入金額">
+                        <label class="text-xs text-gray-400 ml-1">現金餘額</label>
+                        <input type="number" id="in-cash" oninput="liveUpdate()" class="w-full bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-400 transition-all" placeholder="0">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">股票 / 基金帳戶</label>
-                        <input type="number" id="in-stock" class="w-full border-b-2 border-gray-100 p-2 focus:border-blue-500 outline-none transition-all" placeholder="輸入金額">
+                        <label class="text-xs text-gray-400 ml-1">投資市值 (股票/基金)</label>
+                        <input type="number" id="in-stock" oninput="liveUpdate()" class="w-full bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-400 transition-all" placeholder="0">
                     </div>
                     <div>
-                        <label class="block text-xs text-gray-500 mb-1">定期儲蓄 / 定存</label>
-                        <input type="number" id="in-save" class="w-full border-b-2 border-gray-100 p-2 focus:border-blue-500 outline-none transition-all" placeholder="輸入金額">
+                        <label class="text-xs text-gray-400 ml-1">定存/儲蓄</label>
+                        <input type="number" id="in-save" oninput="liveUpdate()" class="w-full bg-gray-50 rounded-xl p-3 outline-none focus:ring-2 focus:ring-blue-400 transition-all" placeholder="0">
                     </div>
-                    <button onclick="saveData()" class="w-full bg-blue-600 text-white font-bold py-3 rounded-xl shadow-md active:scale-95 transition-transform">
-                        確認更新資產
-                    </button>
+                    <button onclick="saveData()" class="w-full bg-blue-600 text-white font-bold py-4 rounded-2xl mt-2 shadow-lg active:scale-95 transition-all">儲存並鎖定數據</button>
                 </div>
             </div>
 
-            <div class="glass-card p-6">
+            <div class="bg-white p-6 rounded-3xl shadow-sm">
                 <canvas id="assetChart"></canvas>
             </div>
         </div>
 
         <div id="tab-goals" class="tab-content">
-            <div class="glass-card p-6 mb-6">
-                <h3 class="font-bold text-gray-700 mb-4">2年 80萬 儲蓄目標</h3>
-                <div class="mb-4">
-                    <div class="flex justify-between text-sm mb-2">
-                        <span id="goal-percent">進度 0%</span>
-                        <span id="goal-remain">還差 $800,000</span>
+            <div class="bg-white p-6 rounded-3xl shadow-sm mb-6">
+                <h3 class="font-bold text-xl mb-4 text-gray-800">2年 80萬 目標進度</h3>
+                <div class="mb-6">
+                    <div class="flex justify-between font-bold mb-2">
+                        <span id="goal-percent" class="text-blue-600">進度 0%</span>
+                        <span id="goal-remain" class="text-gray-500 text-sm">還差 $800,000</span>
                     </div>
-                    <div class="w-full bg-gray-100 h-4 rounded-full overflow-hidden">
-                        <div id="goal-bar" class="bg-green-500 h-full transition-all duration-500" style="width: 0%"></div>
+                    <div class="w-full bg-gray-100 h-5 rounded-full overflow-hidden">
+                        <div id="goal-bar" class="bg-blue-500 h-full w-0 transition-all duration-700"></div>
                     </div>
                 </div>
-                <div class="bg-green-50 p-4 rounded-2xl border border-green-100">
-                    <p class="text-sm text-green-800 leading-relaxed" id="goal-advice">
-                        載入中...
-                    </p>
-                </div>
+                <div id="goal-advice" class="p-4 bg-blue-50 text-blue-800 rounded-2xl text-sm leading-loose">
+                    </div>
             </div>
 
-            <div class="glass-card p-6">
-                <h3 class="font-bold text-gray-700 mb-2">投資分析與建議</h3>
-                <p class="text-xs text-gray-400 mb-4">基於當前通膨率 3% 估算</p>
-                <div id="analysis-text" class="text-sm text-gray-600 space-y-3">
-                    </div>
+            <div class="bg-red-50 p-6 rounded-3xl border border-red-100">
+                <h3 class="font-bold text-red-600 mb-2 italic">⚠️ 通膨試算警告</h3>
+                <p id="inflation-text" class="text-sm text-red-700"></p>
             </div>
         </div>
     </main>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t flex justify-around p-4">
-        <button onclick="switchTab('assets')" id="btn-assets" class="flex flex-col items-center text-blue-600">
-            <i class="fas fa-wallet text-xl"></i>
-            <span class="text-[10px] mt-1 font-bold">資產記帳</span>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/90 backdrop-blur-lg border-t flex justify-around p-4 shadow-2xl">
+        <button onclick="switchTab('assets')" class="flex flex-col items-center text-blue-600 transition-colors">
+            <i class="fas fa-wallet text-xl"></i><span class="text-[10px] mt-1">資產記帳</span>
         </button>
-        <button onclick="switchTab('goals')" id="btn-goals" class="flex flex-col items-center text-gray-400">
-            <i class="fas fa-bullseye text-xl"></i>
-            <span class="text-[10px] mt-1 font-bold">目標試算</span>
+        <button onclick="switchTab('goals')" class="flex flex-col items-center text-gray-400 transition-colors">
+            <i class="fas fa-chart-line text-xl"></i><span class="text-[10px] mt-1">目標試算</span>
         </button>
     </nav>
 
     <script>
-        // 1. 資料初始化 (從手機儲存空間讀取)
-        let myData = JSON.parse(localStorage.getItem('user_finance')) || {
-            cash: 0, stock: 0, save: 0, lastUpdate: '無紀錄'
-        };
+        let myData = JSON.parse(localStorage.getItem('user_finance')) || { cash: 0, stock: 0, save: 0 };
+        let chart;
 
-        // 2. 切換頁籤
+        // 即時試算功能：輸入時數字會跟著動
+        function liveUpdate() {
+            const cash = parseFloat(document.getElementById('in-cash').value) || 0;
+            const stock = parseFloat(document.getElementById('in-stock').value) || 0;
+            const save = parseFloat(document.getElementById('in-save').value) || 0;
+            const total = cash + stock + save;
+            document.getElementById('display-total').innerText = '$ ' + total.toLocaleString();
+            renderChart(cash, stock, save);
+        }
+
         function switchTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
             document.getElementById('tab-' + tabName).classList.add('active');
             
-            document.getElementById('btn-assets').className = tabName === 'assets' ? 'flex flex-col items-center text-blue-600' : 'flex flex-col items-center text-gray-400';
-            document.getElementById('btn-goals').className = tabName === 'goals' ? 'flex flex-col items-center text-blue-600' : 'flex flex-col items-center text-gray-400';
+            // 更新按鈕顏色
+            const btns = document.querySelectorAll('nav button');
+            btns[0].style.color = tabName === 'assets' ? '#2563eb' : '#9ca3af';
+            btns[1].style.color = tabName === 'goals' ? '#2563eb' : '#9ca3af';
             
             if(tabName === 'goals') calculateGoals();
         }
 
-        // 3. 儲存功能
         function saveData() {
             myData.cash = parseFloat(document.getElementById('in-cash').value) || 0;
             myData.stock = parseFloat(document.getElementById('in-stock').value) || 0;
             myData.save = parseFloat(document.getElementById('in-save').value) || 0;
-            myData.lastUpdate = new Date().toLocaleString();
-            
             localStorage.setItem('user_finance', JSON.stringify(myData));
-            alert('資產資料已成功儲存並同步試算！');
-            updateUI();
+            alert('數據已安全儲存至本機');
+            liveUpdate();
         }
 
-        // 4. 更新畫面
-        function updateUI() {
-            const total = myData.cash + myData.stock + myData.save;
-            document.getElementById('display-total').innerText = '$ ' + total.toLocaleString();
-            document.getElementById('lbl-cash').innerText = '$' + myData.cash.toLocaleString();
-            document.getElementById('lbl-stock').innerText = '$' + myData.stock.toLocaleString();
-            document.getElementById('lbl-save').innerText = '$' + myData.save.toLocaleString();
-            document.getElementById('last-update').innerText = '上次更新: ' + myData.lastUpdate;
-            
-            // 填入輸入框
-            document.getElementById('in-cash').value = myData.cash;
-            document.getElementById('in-stock').value = myData.stock;
-            document.getElementById('in-save').value = myData.save;
-
-            renderChart(myData);
-        }
-
-        // 5. 目標試算邏輯
         function calculateGoals() {
-            const total = myData.cash + myData.stock + myData.save;
+            const total = (parseFloat(document.getElementById('in-cash').value) || 0) + 
+                          (parseFloat(document.getElementById('in-stock').value) || 0) + 
+                          (parseFloat(document.getElementById('in-save').value) || 0);
             const target = 800000;
-            const percent = Math.min((total / target) * 100, 100).toFixed(1);
             const remain = Math.max(target - total, 0);
+            const percent = Math.min((total / target) * 100, 100).toFixed(1);
             
             document.getElementById('goal-percent').innerText = `進度 ${percent}%`;
             document.getElementById('goal-remain').innerText = `還差 $${remain.toLocaleString()}`;
             document.getElementById('goal-bar').style.width = percent + '%';
-
-            // 試算建議
-            const monthlySave = (remain / 24).toFixed(0);
-            document.getElementById('goal-advice').innerHTML = 
-                `距離 80 萬目標還需 <b>$${remain.toLocaleString()}</b>。<br>
-                 若要在 2 年內達成，接下來每個月需平均存下 <b>$${monthlySave.toLocaleString()}</b>。`;
-            
-            // 投資建議
-            const inflationImpact = (total * 0.03).toFixed(0);
-            document.getElementById('analysis-text').innerHTML = `
-                <div class="p-3 bg-red-50 rounded-lg text-red-700">⚠️ 通膨警示：按 3% 通膨計，您的資產明年購買力將縮水 約 $${inflationImpact.toLocaleString()}。</div>
-                <div class="p-3 bg-blue-50 rounded-lg text-blue-700">💡 策略：目前投資佔比為 ${((myData.stock/total)*100 || 0).toFixed(1)}%，建議將閒置現金的 20% 轉入低風險標的。</div>
-            `;
+            document.getElementById('goal-advice').innerHTML = `目標 80 萬，目前已達成 <b>$${total.toLocaleString()}</b>。要在兩年內達標，每月需平均存款 <b>$${(remain/24).toFixed(0)}</b> 元。`;
+            document.getElementById('inflation-text').innerText = `若持續保持 3% 通膨，您目前的資產在一年後的實際購買力將縮水約 $${(total * 0.03).toFixed(0)} 元。`;
         }
 
-        // 6. 圖表繪製
-        let chart;
-        function renderChart(d) {
+        function renderChart(c, s, v) {
             const ctx = document.getElementById('assetChart').getContext('2d');
             if(chart) chart.destroy();
             chart = new Chart(ctx, {
                 type: 'doughnut',
                 data: {
-                    labels: ['現金', '股票', '儲蓄'],
+                    labels: ['現金', '投資', '儲蓄'],
                     datasets: [{
-                        data: [d.cash, d.stock, d.save],
+                        data: [c, s, v],
                         backgroundColor: ['#3b82f6', '#8b5cf6', '#f59e0b'],
                         borderWidth: 0
                     }]
                 },
-                options:
+                options: { cutout: '80%', plugins: { legend: { position: 'bottom' } } }
+            });
+        }
+
+        // 頁面載入時讀取舊資料
+        document.getElementById('in-cash').value = myData.cash;
+        document.getElementById('in-stock').value = myData.stock;
+        document.getElementById('in-save').value = myData.save;
+        liveUpdate();
+    </script>
+</body>
+</html>
