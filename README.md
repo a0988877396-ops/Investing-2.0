@@ -4,208 +4,260 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>MUJI 財務戰略管家</title>
+    <title>莫蘭迪財務管家</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        :root { --muji-bg: #F7F3F0; --muji-red: #7F2D2D; --muji-text: #444444; --muji-gray: #BCB8B1; }
-        body { background-color: var(--muji-bg); color: var(--muji-text); font-family: "PingFang TC", sans-serif; }
-        .muji-card { background: white; border: 1px solid #E6E2DF; border-radius: 12px; margin-bottom: 1rem; }
-        .nav-btn { color: var(--muji-gray); transition: 0.3s; font-size: 10px; }
-        .nav-btn.active { color: var(--muji-red); }
-        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; background: #E6E2DF; border: 1px solid #E6E2DF; }
-        .calendar-day { background: white; min-height: 60px; padding: 4px; font-size: 10px; position: relative; cursor: pointer; }
-        .calendar-day:active { background: #F7F3F0; }
-        .today { background: #FFF9F9; border: 1px solid var(--muji-red); }
-        .expense-tag { color: var(--muji-red); font-weight: bold; margin-top: 2px; display: block; }
-        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center; }
+        :root { 
+            --m-blue: #718899; 
+            --m-light-blue: #A2B5BB;
+            --m-bg: #F4F5F7; 
+            --m-text: #4A5568; 
+            --m-gray: #CBD5E0; 
+        }
+        body { background-color: var(--m-bg); color: var(--m-text); font-family: "PingFang TC", sans-serif; overflow-x: hidden; }
+        .muji-card { background: white; border-radius: 16px; margin-bottom: 1.2rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+        .nav-btn { color: var(--m-gray); transition: 0.3s; font-size: 10px; }
+        .nav-btn.active { color: var(--m-blue); }
+        
+        /* 日曆樣式 */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; background: #EDF2F7; }
+        .calendar-day { background: white; min-height: 75px; padding: 6px; font-size: 11px; cursor: pointer; display: flex; flex-direction: column; }
+        .calendar-day:active { background: #f0f4f8; }
+        .today-circle { border: 1.5px solid var(--m-blue); border-radius: 50%; width: 20px; height: 20px; display: flex; items-center; justify-content: center; }
+        .day-total { color: var(--m-blue); font-weight: bold; font-size: 10px; margin-top: auto; }
+
+        /* 分頁切換控制 */
+        .tab-content { display: none; min-height: 80vh; }
+        .tab-content.active { display: block; animation: fadeIn 0.4s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Modal */
+        .modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; align-items: flex-end; }
         .modal.active { display: flex; }
+        .modal-content { background: white; width: 100%; border-radius: 24px 24px 0 0; padding: 24px; animation: slideUp 0.3s ease-out; }
+        @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+        
+        input { border-bottom: 1px solid var(--m-gray) !important; background: transparent !important; }
+        input:focus { border-bottom: 2px solid var(--m-blue) !important; outline: none; }
+        .m-btn { background: var(--m-blue); color: white; padding: 12px; border-radius: 12px; font-size: 14px; width: 100%; }
     </style>
 </head>
 <body class="pb-24">
 
-    <header class="p-4 bg-white border-b sticky top-0 z-50 flex justify-between items-center">
-        <h1 id="header-title" class="text-sm font-medium tracking-widest">基礎資產</h1>
-        <div id="month-display" class="text-xs font-bold text-gray-400">2026 / 01</div>
+    <header class="p-5 bg-white flex justify-between items-center sticky top-0 z-40">
+        <h1 id="header-title" class="text-lg font-medium tracking-widest text-slate-700">資產狀況</h1>
+        <span class="text-xs text-slate-400 font-mono">2026.01</span>
     </header>
 
     <main class="p-4 max-w-md mx-auto">
         
         <div id="tab-assets" class="tab-content active">
-            <div class="muji-card p-6 border-l-8 border-blue-200">
-                <p class="text-[10px] text-gray-400">🛡️ 緊急備用金 (已鎖定)</p>
-                <h2 class="text-2xl font-bold text-blue-800">$ 180,000</h2>
+            <div class="muji-card p-8 text-center bg-gradient-to-br from-slate-50 to-white">
+                <p class="text-[11px] text-slate-400 uppercase tracking-widest mb-2">Total Balance</p>
+                <h2 id="total-net-display" class="text-4xl font-light text-slate-800 tracking-tight">$ 180,000</h2>
             </div>
+            
             <div class="muji-card p-6">
-                <h3 class="text-sm font-bold mb-4">流動資產狀況</h3>
-                <div class="space-y-4 text-sm">
-                    <div class="flex justify-between"><span>目前其餘存款</span><input type="number" id="other-save" class="text-right w-1/2 border-b border-gray-200" value="0"></div>
-                    <div class="flex justify-between"><span>投資總市值</span><input type="number" id="in-stock" class="text-right w-1/2 border-b border-gray-200" value="0"></div>
+                <div class="flex items-center gap-3 mb-6">
+                    <div class="w-1 h-5 bg-blue-300"></div>
+                    <h3 class="font-bold text-sm">資產明細</h3>
+                </div>
+                <div class="space-y-6">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">🛡️ 緊急備用金</span>
+                        <span class="font-mono font-bold text-blue-500">$ 180,000</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">銀行儲蓄</span>
+                        <input type="number" id="other-save" value="0" oninput="calcNet()" class="text-right w-1/3 p-1">
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm">投資市值</span>
+                        <input type="number" id="in-stock" value="0" oninput="calcNet()" class="text-right w-1/3 p-1">
+                    </div>
                 </div>
             </div>
         </div>
 
         <div id="tab-calendar" class="tab-content">
             <div class="muji-card overflow-hidden">
-                <div class="grid grid-cols-7 text-center text-[10px] py-2 bg-stone-100 text-gray-500">
-                    <div>日</div><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div>
+                <div class="grid grid-cols-7 text-center text-[10px] py-3 bg-slate-50 text-slate-400 border-b">
+                    <div>SUN</div><div>MON</div><div>TUE</div><div>WED</div><div>THU</div><div>FRI</div><div>SAT</div>
                 </div>
-                <div id="calendar-body" class="calendar-grid">
-                    </div>
+                <div id="calendar-body" class="calendar-grid"></div>
             </div>
-            <div class="p-2 text-[11px] text-gray-400">＊點擊日期記錄當日支出</div>
+            <div class="mt-4 space-y-2">
+                <p class="text-[11px] text-slate-400"><i class="fas fa-info-circle mr-1"></i> 點擊日期可記錄多筆支出</p>
+            </div>
         </div>
 
         <div id="tab-analysis" class="tab-content">
             <div class="muji-card p-6">
-                <h3 class="text-sm font-bold mb-4 border-l-4 border-red-800 pl-3">本月收支數據分析</h3>
-                <div class="space-y-5">
-                    <div class="flex justify-between text-sm">
-                        <span>目前月薪收入</span>
-                        <input type="number" id="salary" value="32000" class="text-right font-bold text-red-800" oninput="updateStrategy()">
+                <h3 class="text-sm font-bold mb-6 flex items-center gap-2"><i class="fas fa-fingerprint text-blue-300"></i> 本月數據分析</h3>
+                <div class="space-y-4">
+                    <div class="flex justify-between text-sm"><span>預設月薪</span><input type="number" id="salary" value="32000" class="text-right font-bold w-1/2" oninput="updateStrategy()"></div>
+                    <div class="p-4 bg-slate-50 rounded-2xl flex justify-between items-center">
+                        <span class="text-xs text-slate-500">已記帳總額</span>
+                        <span id="analysis-spent" class="font-bold text-slate-700">$ 0</span>
                     </div>
-                    <div class="p-4 bg-stone-50 rounded-lg space-y-3">
-                        <div class="flex justify-between text-xs text-gray-500">
-                            <span>本月已記帳支出</span>
-                            <span id="total-spent-display" class="font-bold text-gray-800">$ 0</span>
+                    
+                    <div id="strategy-box" class="p-5 rounded-2xl border transition-all duration-500">
+                        <div class="flex justify-between mb-2">
+                            <span id="strategy-label" class="text-xs font-bold">--</span>
+                            <span id="strategy-status" class="text-[10px] bg-white/50 px-2 py-1 rounded">分析中</span>
                         </div>
-                        <div class="flex justify-between text-xs text-gray-500 border-t pt-2">
-                            <span>預估結餘</span>
-                            <span id="surplus-display" class="font-bold text-blue-600">$ 32,000</span>
-                        </div>
-                    </div>
-                    <div id="strategy-card" class="p-4 rounded-xl border-2 transition-all duration-500">
-                        <div class="flex justify-between items-center mb-2">
-                            <span id="strategy-label" class="text-xs font-bold">分析中...</span>
-                            <span id="strategy-status" class="text-[10px] px-2 py-1 rounded bg-white">等待數據</span>
-                        </div>
-                        <p id="strategy-advice" class="text-[11px] leading-relaxed"></p>
+                        <p id="strategy-advice" class="text-[11px] leading-relaxed text-slate-500"></p>
                     </div>
                 </div>
             </div>
-            
-            <div class="muji-card p-6 bg-red-50/30">
-                <h3 class="text-xs font-bold mb-2">2年 80 萬計畫進度</h3>
-                <div id="plan-progress-mini"></div>
+
+            <div class="muji-card p-6 border-2 border-dashed border-slate-200">
+                <p class="text-[11px] text-slate-400 mb-2">2年 80 萬進度</p>
+                <div id="mini-progress"></div>
             </div>
         </div>
     </main>
 
-    <div id="record-modal" class="modal">
-        <div class="bg-white p-6 rounded-2xl w-80 shadow-2xl">
-            <h3 id="modal-date" class="text-sm font-bold mb-4">2026-01-01</h3>
-            <div class="space-y-4">
-                <input type="number" id="temp-amount" placeholder="輸入金額" class="w-full text-2xl py-2 border-b-2 border-red-800 text-center">
-                <input type="text" id="temp-note" placeholder="備註 (如:晚餐)" class="w-full text-xs text-center text-gray-400">
-                <div class="flex gap-2">
-                    <button onclick="closeModal()" class="w-1/2 py-2 text-xs bg-gray-100 rounded">取消</button>
-                    <button onclick="saveRecord()" class="w-1/2 py-2 text-xs bg-red-800 text-white rounded">儲存紀錄</button>
+    <div id="record-modal" class="modal" onclick="if(event.target==this) closeModal()">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modal-date" class="font-bold text-slate-700">2026-01-01</h3>
+                <button onclick="closeModal()" class="text-slate-300"><i class="fas fa-times"></i></button>
+            </div>
+            
+            <div id="current-records" class="mb-6 space-y-2 max-height-[200px] overflow-y-auto">
                 </div>
+
+            <div class="space-y-4 border-t pt-4">
+                <div class="flex gap-2">
+                    <input type="text" id="temp-note" placeholder="項目" class="w-3/5 text-sm">
+                    <input type="number" id="temp-amount" placeholder="金額" class="w-2/5 text-sm text-right">
+                </div>
+                <button onclick="saveOneRecord()" class="m-btn">+ 增加紀錄</button>
             </div>
         </div>
     </div>
 
-    <nav class="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-4 shadow-lg">
-        <button onclick="switchTab('assets')" id="nav-assets" class="nav-btn active flex flex-col items-center"><i class="fas fa-shield-alt text-lg"></i><span>資產</span></button>
-        <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center"><i class="fas fa-calendar-day text-lg"></i><span>日曆記帳</span></button>
-        <button onclick="switchTab('analysis')" id="nav-analysis" class="nav-btn flex flex-col items-center"><i class="fas fa-chart-line text-lg"></i><span>戰略分析</span></button>
+    <nav class="fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-md border-t flex justify-around p-4 shadow-sm z-50">
+        <button onclick="switchTab('assets')" id="nav-assets" class="nav-btn active flex flex-col items-center"><i class="fas fa-wallet text-lg mb-1"></i><span>資產</span></button>
+        <button onclick="switchTab('calendar')" id="nav-calendar" class="nav-btn flex flex-col items-center"><i class="fas fa-calendar-alt text-lg mb-1"></i><span>記帳</span></button>
+        <button onclick="switchTab('analysis')" id="nav-analysis" class="nav-btn flex flex-col items-center"><i class="fas fa-leaf text-lg mb-1"></i><span>戰略</span></button>
     </nav>
 
     <script>
-        let records = {}; // 格式: {'2026-01-11': 150}
-        let selectedDate = '';
-
-        function initCalendar() {
-            const body = document.getElementById('calendar-body');
-            body.innerHTML = '';
-            const now = new Date();
-            const year = 2026, month = 0; // 鎖定在 2026/01
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = 31;
-
-            for(let i=0; i<firstDay; i++) body.innerHTML += `<div class="calendar-day bg-stone-50"></div>`;
-            
-            for(let day=1; day<=daysInMonth; day++) {
-                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
-                const isToday = day === 11;
-                const amt = records[dateStr] ? `$${records[dateStr]}` : '';
-                body.innerHTML += `
-                    <div class="calendar-day ${isToday?'today':''}" onclick="openModal('${dateStr}')">
-                        ${day}
-                        <span class="expense-tag">${amt}</span>
-                    </div>`;
-            }
-        }
-
-        function openModal(date) {
-            selectedDate = date;
-            document.getElementById('modal-date').innerText = date;
-            document.getElementById('temp-amount').value = records[date] || '';
-            document.getElementById('record-modal').classList.add('active');
-        }
-
-        function closeModal() { document.getElementById('record-modal').classList.remove('active'); }
-
-        function saveRecord() {
-            const amt = Number(document.getElementById('temp-amount').value);
-            if(amt > 0) records[selectedDate] = amt;
-            else delete records[selectedDate];
-            initCalendar();
-            closeModal();
-            updateStrategy();
-        }
-
-        function updateStrategy() {
-            const salary = Number(document.getElementById('salary').value) || 0;
-            const totalSpent = Object.values(records).reduce((a,b)=>a+b, 0);
-            const surplus = salary - totalSpent;
-            
-            document.getElementById('total-spent-display').innerText = `$ ${totalSpent.toLocaleString()}`;
-            document.getElementById('surplus-display').innerText = `$ ${surplus.toLocaleString()}`;
-
-            const card = document.getElementById('strategy-card');
-            const label = document.getElementById('strategy-label');
-            const status = document.getElementById('strategy-status');
-            const advice = document.getElementById('strategy-advice');
-
-            const spendRatio = totalSpent / salary;
-
-            if (spendRatio <= 0.4) { // 進取：花不到 40%
-                card.className = "p-4 rounded-xl border-2 border-emerald-200 bg-emerald-50";
-                label.innerText = "戰略等級：進取模式";
-                status.innerText = "存款率 60%+";
-                advice.innerText = "表現優異！依照此節奏，你的 80 萬計畫將縮短 4 個月達成。目前的物價完全沒對你造成威脅。";
-            } else if (spendRatio <= 0.6) { // 平衡：花 40%~60%
-                card.className = "p-4 rounded-xl border-2 border-blue-200 bg-blue-50";
-                label.innerText = "戰略等級：平衡模式";
-                status.innerText = "存款率 40%-50%";
-                advice.innerText = "這是在通膨環境下最健康的狀態。在享受生活（乾麵加蛋）與存錢之間取得了完美平衡。";
-            } else { // 保守：花超過 60%
-                card.className = "p-4 rounded-xl border-2 border-orange-200 bg-orange-50";
-                label.innerText = "戰略等級：保守模式";
-                status.innerText = "存款率 < 40%";
-                advice.innerText = "目前生活成本較高。考慮到你已有 18 萬備用金，不必過度焦慮，但要警惕不必要的社交開銷。";
-            }
-            
-            // 更新迷你進度條
-            const totalAssets = 180000 + (Number(document.getElementById('other-save').value)||0) + (Number(document.getElementById('in-stock').value)||0);
-            const percent = ((totalAssets / 800000) * 100).toFixed(1);
-            document.getElementById('plan-progress-mini').innerHTML = `
-                <div class="flex justify-between text-[10px] mb-1"><span>目標 80 萬</span><span>已達成 ${percent}%</span></div>
-                <div class="w-full bg-white h-1.5 rounded-full overflow-hidden"><div class="bg-red-800 h-full" style="width:${percent}%"></div></div>
-            `;
-        }
+        let db = JSON.parse(localStorage.getItem('my_finance_db')) || {}; 
+        // 結構: { '2026-01-11': [{note:'餐', amt:100}, {note:'飲', amt:50}] }
+        let currentOpenDate = '';
 
         function switchTab(name) {
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
             document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
             document.getElementById('tab-' + name).classList.add('active');
             document.getElementById('nav-' + name).classList.add('active');
-            const titles = {'assets':'基礎資產', 'calendar':'日曆記帳', 'analysis':'戰略分析'};
+            const titles = {'assets':'資產狀況', 'calendar':'每日記帳', 'analysis':'財務戰略'};
             document.getElementById('header-title').innerText = titles[name];
+            if(name === 'analysis') updateStrategy();
         }
 
-        window.onload = () => { initCalendar(); updateStrategy(); };
+        function initCalendar() {
+            const body = document.getElementById('calendar-body');
+            body.innerHTML = '';
+            const firstDay = new Date(2026, 0, 1).getDay();
+            for(let i=0; i<firstDay; i++) body.innerHTML += `<div class="calendar-day bg-slate-50/50"></div>`;
+            
+            for(let d=1; d<=31; d++) {
+                const dateStr = `2026-01-${String(d).padStart(2,'0')}`;
+                const dayRecords = db[dateStr] || [];
+                const dayTotal = dayRecords.reduce((sum, r) => sum + r.amt, 0);
+                const isToday = d === 11;
+                
+                body.innerHTML += `
+                    <div class="calendar-day" onclick="openModal('${dateStr}')">
+                        <span class="${isToday?'today-circle':''}">${d}</span>
+                        <span class="day-total">${dayTotal > 0 ? '$'+dayTotal : ''}</span>
+                    </div>`;
+            }
+        }
+
+        function openModal(date) {
+            currentOpenDate = date;
+            document.getElementById('modal-date').innerText = date;
+            renderCurrentRecords();
+            document.getElementById('record-modal').classList.add('active');
+        }
+
+        function renderCurrentRecords() {
+            const list = document.getElementById('current-records');
+            const dayRecords = db[currentOpenDate] || [];
+            list.innerHTML = dayRecords.length ? '' : '<p class="text-xs text-slate-300 text-center py-4">本日無紀錄</p>';
+            dayRecords.forEach((r, idx) => {
+                list.innerHTML += `
+                    <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl">
+                        <span class="text-xs text-slate-500">${r.note}</span>
+                        <div class="flex items-center gap-3">
+                            <span class="text-sm font-bold text-slate-700">$${r.amt}</span>
+                            <button onclick="deleteRecord(${idx})" class="text-slate-300 text-[10px]"><i class="fas fa-trash"></i></button>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        function saveOneRecord() {
+            const note = document.getElementById('temp-note').value || '未分類';
+            const amt = Number(document.getElementById('temp-amount').value);
+            if(!amt) return;
+            if(!db[currentOpenDate]) db[currentOpenDate] = [];
+            db[currentOpenDate].push({note, amt});
+            localStorage.setItem('my_finance_db', JSON.stringify(db));
+            document.getElementById('temp-note').value = '';
+            document.getElementById('temp-amount').value = '';
+            renderCurrentRecords();
+            initCalendar();
+        }
+
+        function deleteRecord(idx) {
+            db[currentOpenDate].splice(idx, 1);
+            localStorage.setItem('my_finance_db', JSON.stringify(db));
+            renderCurrentRecords();
+            initCalendar();
+        }
+
+        function closeModal() { document.getElementById('record-modal').classList.remove('active'); }
+
+        function calcNet() {
+            const other = Number(document.getElementById('other-save').value) || 0;
+            const stock = Number(document.getElementById('in-stock').value) || 0;
+            document.getElementById('total-net-display').innerText = '$ ' + (180000 + other + stock).toLocaleString();
+        }
+
+        function updateStrategy() {
+            const salary = Number(document.getElementById('salary').value) || 0;
+            let totalSpent = 0;
+            Object.values(db).forEach(day => day.forEach(r => totalSpent += r.amt));
+            
+            document.getElementById('analysis-spent').innerText = `$ ${totalSpent.toLocaleString()}`;
+            const ratio = totalSpent / salary;
+            const box = document.getElementById('strategy-box');
+            const label = document.getElementById('strategy-label');
+            const advice = document.getElementById('strategy-advice');
+
+            if(ratio < 0.4) {
+                box.className = "p-5 rounded-2xl border border-emerald-100 bg-emerald-50";
+                label.innerText = "進取：資金高速成長中";
+                advice.innerText = "目前消費極低，你的存錢效率非常驚人。適合增加定期定額的額度。";
+            } else if(ratio < 0.6) {
+                box.className = "p-5 rounded-2xl border border-blue-100 bg-blue-50";
+                label.innerText = "平衡：莫蘭迪式的優雅";
+                advice.innerText = "你在生活品質與未來儲蓄間取得了平衡，這是在通膨時代最長久的理財方式。";
+            } else {
+                box.className = "p-5 rounded-2xl border border-slate-100 bg-white";
+                label.innerText = "保守：應對高物價挑戰";
+                advice.innerText = "目前的開銷稍大，但考慮到你有 18 萬備用金，建議先專注於考試加薪，不必過度苛待自己。";
+            }
+        }
+
+        window.onload = () => { initCalendar(); calcNet(); };
     </script>
 </body>
 </html>
